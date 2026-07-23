@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "engineering-superpowers",
+  "displayName": "Engineering Superpowers",
+  "version": "0.1.0",
+  "description": "An engineering workflow engine for Claude Code: enforces requirement analysis, design review, implementation, testing, code review, commit, PR, and merge phases instead of jumping straight to code.",
+  "author": {
+    "name": "Chen Qianwen"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/cqw309/engineering-superpowers",
+  "repository": "https://github.com/cqw309/engineering-superpowers",
+  "keywords": [
+    "workflow",
+    "engineering",
+    "sop",
+    "code-review",
+    "git-workflow",
+    "testing-strategy"
+  ],
+  "hooks": "./hooks/hooks.json"
+}

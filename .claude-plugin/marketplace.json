@@ -1,0 +1,13 @@
+{
+  "name": "engineering-superpowers",
+  "owner": {
+    "name": "Chen Qianwen"
+  },
+  "plugins": [
+    {
+      "name": "engineering-superpowers",
+      "source": "./",
+      "description": "Engineering workflow engine enforcing requirement analysis, design review, testing, code review, and git flow before merge."
+    }
+  ]
+}
