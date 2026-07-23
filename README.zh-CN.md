@@ -90,6 +90,12 @@ diff 和设计文档，而且在工具权限层面就不允许它编辑文件(`W
    ```json
    { "test": "make ci-test", "build": "make ci-build", "lint": "make ci-lint" }
    ```
+   同一个文件还支持 `protectedBranches`——除了 git 自动检测到的默认分支之外，
+   额外指定 `hooks/pre-commit-check.sh` 也要拒绝直接提交的分支，比如团队把
+   `develop` 也当作保护分支：
+   ```json
+   { "protectedBranches": ["develop"] }
+   ```
 3. 语言标志文件：`package.json`（npm/pnpm/yarn；同时会检测 `tsconfig.json` 识别
    TypeScript，如果项目自己没声明 lint script，默认用 `tsc --noEmit` 做类型检查）、
    `pyproject.toml`/`requirements.txt`（pytest）、`go.mod`、`pom.xml`/`build.gradle`、

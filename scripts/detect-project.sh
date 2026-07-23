@@ -13,6 +13,7 @@ TEST_CMD=""
 BUILD_CMD=""
 LINT_CMD=""
 PROJECT_TYPE="unknown"
+PROTECTED_BRANCHES=""
 
 # Priority 0: Makefile — common lingua franca for polyglot/monorepo teams.
 if [ -f "Makefile" ]; then
@@ -33,7 +34,14 @@ if [ -f "$OVERRIDE_FILE" ]; then
     [ -n "$OV_TEST" ] && TEST_CMD="$OV_TEST"
     [ -n "$OV_BUILD" ] && BUILD_CMD="$OV_BUILD"
     [ -n "$OV_LINT" ] && LINT_CMD="$OV_LINT"
-    PROJECT_TYPE="override"
+    # Only opt out of language-marker detection below when a command was
+    # actually overridden — a file that ONLY sets protectedBranches (see
+    # below) shouldn't silently disable test/lint auto-detection.
+    [ -n "$OV_TEST$OV_BUILD$OV_LINT" ] && PROJECT_TYPE="override"
+    # protectedBranches: extra branches (beyond the git-detected default,
+    # e.g. a team's "develop" integration branch) that commit-gate.sh
+    # should also refuse direct commits on.
+    PROTECTED_BRANCHES="$(jq -r '(.protectedBranches // []) | join(" ")' "$OVERRIDE_FILE" 2>/dev/null)"
   fi
 fi
 
@@ -99,6 +107,7 @@ if [ -z "$TEST_CMD" ] && [ "$PROJECT_TYPE" = "unknown" ]; then
   echo "TEST_CMD="
   echo "BUILD_CMD="
   echo "LINT_CMD="
+  printf 'PROTECTED_BRANCHES=%q\n' "$PROTECTED_BRANCHES"
   exit 0
 fi
 
@@ -110,3 +119,4 @@ printf 'PROJECT_TYPE=%q\n' "$PROJECT_TYPE"
 printf 'TEST_CMD=%q\n' "$TEST_CMD"
 printf 'BUILD_CMD=%q\n' "$BUILD_CMD"
 printf 'LINT_CMD=%q\n' "$LINT_CMD"
+printf 'PROTECTED_BRANCHES=%q\n' "$PROTECTED_BRANCHES"

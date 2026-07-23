@@ -99,6 +99,12 @@ same `code-review` skill checklist.
    ```json
    { "test": "make ci-test", "build": "make ci-build", "lint": "make ci-lint" }
    ```
+   The same file also accepts `protectedBranches` — extra branches (beyond the
+   git-detected default) that `hooks/pre-commit-check.sh` refuses direct commits on,
+   e.g. a team that treats `develop` as protected alongside `main`:
+   ```json
+   { "protectedBranches": ["develop"] }
+   ```
 3. Language markers: `package.json` (npm/pnpm/yarn; also detects `tsconfig.json` for
    TypeScript and defaults its lint check to `tsc --noEmit` if the project hasn't
    declared its own lint script), `pyproject.toml`/`requirements.txt` (pytest), `go.mod`,

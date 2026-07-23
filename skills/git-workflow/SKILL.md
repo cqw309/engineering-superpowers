@@ -16,10 +16,13 @@ tied to a specific platform's CLI.
    assuming.
 2. Determine the default branch without hardcoding "main": prefer
    `git symbolic-ref refs/remotes/origin/HEAD` (fast, local, no network); if that's
-   unset, fall back to checking for a local `main` then `master` branch.
-3. Confirm the current branch is **not** the default branch. If it is, create a feature
-   branch: `git switch -c feature/<short-description>` (kebab-case, e.g.
-   `feature/user-authentication`).
+   unset, fall back to checking for a local `main` then `master` branch. If the team
+   also treats another branch as protected (e.g. a `develop` integration branch), that
+   should be listed in `.claude/project-commands.json`'s `protectedBranches` — see
+   Project-type detection in the README — so the hook in step 3 below catches it too.
+3. Confirm the current branch is **not** the default branch (or another configured
+   protected branch). If it is, create a feature branch: `git switch -c
+   feature/<short-description>` (kebab-case, e.g. `feature/user-authentication`).
 4. Never commit directly on the default branch — see Golden Rule 3.
 
 ## Phase 6: Commit
@@ -32,9 +35,10 @@ Only after Phase 5 Code Review has reached an explicit **APPROVED** verdict:
    - Examples: `feat(auth): add jwt login`, `fix(api): fix user query pagination`
    - Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`
 3. The plugin's `hooks/pre-commit-check.sh` runs automatically on any `git commit` Bash
-   call and will block the commit (exit code 2) if: the branch is the default branch,
-   detected tests fail, detected lint fails, or a likely secret is found in the staged
-   diff. Read its stderr output if a commit is blocked — it names the specific failure.
+   call and will block the commit (exit code 2) if: the branch is the default branch or
+   another branch listed in `protectedBranches`, detected tests fail, detected lint
+   fails, or a likely secret is found in the staged diff. Read its stderr output if a
+   commit is blocked — it names the specific failure.
 4. If the hook reports it **could not detect a test command** for this project, that is
    not a green light — it means you are the only check left. Confirm tests were actually
    run and passed before committing anyway.
