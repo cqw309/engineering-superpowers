@@ -1,5 +1,7 @@
 # Engineering Superpowers
 
+**English** | [简体中文](README.zh-CN.md)
+
 A Claude Code plugin that turns coding requests into a real engineering process —
 requirement analysis, design, implementation, testing, review, commit, PR, merge —
 instead of jumping straight to code. Works across Node.js, Python, Go, Java, Rust, and
@@ -19,7 +21,7 @@ commit time regardless of what the conversation did or didn't do.
 | Never commit on `main`/`master` | `hooks/pre-commit-check.sh` | **Hard** (blocks the commit) |
 | Tests pass before commit | `hooks/pre-commit-check.sh` | **Hard** where a test command is detected; soft otherwise (with a warning) |
 | No obvious secrets in the diff | `hooks/pre-commit-check.sh` | **Hard** (blocks the commit) |
-| Code review reaches APPROVED before commit | `code-review` skill | Soft (prompt-level) |
+| Code review reaches APPROVED before commit | `agents/code-reviewer.md` (independent context) + `code-review` skill fallback | Medium — the reviewer runs in its own context with `Write`/`Edit` disallowed at the tool-permission level, so it structurally can't patch instead of reporting; reaching APPROVED itself is still soft |
 | Branch deletion requires explicit confirmation | `git-workflow` skill, Phase 8 | Soft (prompt-level, but backed by Claude Code's own tool-permission prompts) |
 
 Being upfront about this: skills and commands are instructions injected into Claude's
@@ -78,6 +80,16 @@ waits for you to approve it, implements against that plan, runs the project's te
 only commits once that review says APPROVED. Deleting the feature branch after merge is
 still confirmed with you explicitly — that step is never automatic.
 
+## Independent code review
+
+Phase 5 doesn't just ask the same conversation to grade its own work. `/develop` and
+`/review` dispatch to `agents/code-reviewer.md` — a subagent with no memory of the
+implementation discussion, given only the diff and the design doc, and structurally
+unable to edit files (`Write`/`Edit` are in its `disallowedTools`). It can only report
+findings and a verdict, not quietly patch around them. If subagent dispatch isn't
+available in a given environment, both commands fall back to reviewing inline with the
+same `code-review` skill checklist.
+
 ## Project-type detection
 
 `scripts/detect-project.sh` figures out test/build/lint commands in this priority order:
@@ -104,7 +116,9 @@ engineering-superpowers/
 │   ├── engineering-workflow/SKILL.md   # master SOP + Golden Rules
 │   ├── git-workflow/SKILL.md           # Phase 1, 6, 7, 8
 │   ├── testing-strategy/SKILL.md       # Phase 4
-│   └── code-review/SKILL.md            # Phase 5
+│   └── code-review/SKILL.md            # Phase 5 checklist (shared by agent + fallback)
+├── agents/
+│   └── code-reviewer.md                # independent Phase 5 reviewer, can't edit files
 ├── commands/
 │   ├── develop.md
 │   ├── review.md

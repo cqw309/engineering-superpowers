@@ -44,9 +44,18 @@ unrelated refactors, no speculative abstraction. After each meaningful chunk, ru
 Apply `testing-strategy` skill. Do not proceed to Phase 5 with failing tests.
 
 ## Phase 5 — Code Review
-Apply `code-review` skill, produce the report from `templates/code-review-report.md`.
-NEEDS CHANGE sends you back to Phase 3 for that specific finding, then re-review — not
-straight to commit.
+Prefer independence over convenience: invoke `@agent-engineering-superpowers:code-reviewer`
+with the design doc path and what to diff (feature branch vs. default branch). It has no
+memory of this conversation and can't edit files — its job is a verdict, not a fix.
+
+If subagent dispatch isn't available in this environment, fall back to applying the
+`code-review` skill yourself, producing the same report from
+`templates/code-review-report.md`. Same checklist either way — only the reviewer's
+independence changes, and the fallback exists so this workflow never gets stuck when
+that capability isn't present.
+
+NEEDS CHANGE (from either path) sends you back to Phase 3 for that specific finding, then
+re-review — not straight to commit.
 
 ## Phase 6 — Commit
 Only after an APPROVED verdict. Apply `git-workflow` skill, Phase 6. The commit hook

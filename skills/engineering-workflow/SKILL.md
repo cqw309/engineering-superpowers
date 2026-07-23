@@ -36,6 +36,16 @@ the plugin's Golden Rules — the other three skills in this plugin (`git-workfl
    Warn the user and ask them to verify manually — never block a project indefinitely
    just because it doesn't match a known stack. This workflow must stay usable on
    projects it doesn't recognize.
+10. **Match the user's input language for everything you write.** Requirement Analysis
+    Reports, design doc prose, review findings, PR descriptions, and all conversational
+    text should be in whatever language the user is writing in — Chinese in, Chinese out;
+    English in, English out; and so on for any other language. This applies per-request,
+    not per-project: if the user switches language mid-conversation, follow them. Keep
+    these fixed regardless of input language, because tooling and other humans depend on
+    them staying literal and greppable: Conventional Commit type prefixes (`feat`, `fix`,
+    etc.), `feature/*` branch naming, the verdict tokens `APPROVED` / `NEEDS CHANGE`, and
+    template section headers (e.g. `## Background`, `## Risk`) — translate the content
+    under those headers, not the headers themselves.
 
 ## This skill's job vs. `/develop`
 
@@ -73,7 +83,7 @@ commit, PR, and merge.
 | 2 | Technical Design | this skill + `templates/design-document.md`, via `/develop` |
 | 3 | Implementation | this skill, via `/develop` |
 | 4 | Testing | `testing-strategy` skill, via `/develop` |
-| 5 | Code Review | `code-review` skill + `templates/code-review-report.md`, via `/develop` or `/review` |
+| 5 | Code Review | `agents/code-reviewer.md` (independent context) + `code-review` skill, via `/develop` or `/review` |
 | 6 | Commit | `git-workflow` skill, via `/develop` or `/prepare-pr` |
 | 7 | Pull Request | `git-workflow` skill + `templates/pull-request-template.md`, via `/develop` or `/prepare-pr` |
 | 8 | Merge Workflow | `git-workflow` skill, via `/develop` |
