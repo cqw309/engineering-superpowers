@@ -30,77 +30,88 @@ except Exception:
 
 CMD="$(extract_command)"
 
-case "$CMD" in
-  *"git commit"*) ;;
-  *) exit 0 ;;
-esac
+# Detects a real `git commit` invocation — even with global options in
+# between (`git -c user.email=x commit`, `git --no-pager commit`,
+# `git -C dir commit`) or shell metacharacters jammed against it with no
+# spaces (`foo&&git commit`) — while NOT firing on strings that merely
+# contain the words "git" and "commit" as arguments to something else
+# (`grep -r "git commit" .`, `echo "remember to git commit"`). A plain
+# substring match on "git commit" gets both of these wrong.
+is_git_commit() {
+  local raw="$1"
+  local spaced
+  # A newline separates shell statements exactly like `;` — without this,
+  # a `git commit` that isn't the very first line of a multi-line Bash
+  # tool command (e.g. `git add x` then `git commit -m y` on the next
+  # line) would fail to register as an invocation start below.
+  spaced="${raw//$'\n'/ ; }"
+  spaced="$(printf '%s' "$spaced" | sed -E 's/(&&|\|\||[;&|(){}])/ \1 /g')"
+  local -a words
+  set -f
+  words=($spaced)
+  set +f
+  local n=${#words[@]} i=0 w base prev a
+  while [ "$i" -lt "$n" ]; do
+    w="${words[$i]}"
+    base="${w##*/}"
+    if [ "$base" = "git" ]; then
+      prev=""
+      [ "$i" -gt 0 ] && prev="${words[$((i - 1))]}"
+      case "$prev" in
+        # "git" only counts as an invocation if it sits where a command
+        # can start: the very first word, right after a shell separator,
+        # or right after a common wrapper command.
+        ""|";"|"&"|"&&"|"|"|"||"|"("|")"|"{"|"}"|"!"|sudo|time|nice|nohup|env|exec|ionice)
+          i=$((i + 1))
+          while [ "$i" -lt "$n" ]; do
+            a="${words[$i]}"
+            case "$a" in
+              -c|-C) i=$((i + 2)) ;;
+              -*) i=$((i + 1)) ;;
+              *) break ;;
+            esac
+          done
+          if [ "$i" -lt "$n" ] && [ "${words[$i]}" = "commit" ]; then
+            return 0
+          fi
+          ;;
+      esac
+    fi
+    i=$((i + 1))
+  done
+  return 1
+}
+
+if ! is_git_commit "$CMD"; then
+  exit 0
+fi
 
 # --- from here on, this Bash call IS a git commit: run the real gate ---
+
+# Bash tool calls can be preceded by earlier `cd`s in the same persistent
+# shell. Claude Code reports the shell's actual cwd for this call in the
+# hook payload — use it explicitly instead of trusting our own process's
+# cwd, so the branch/test/secret checks below never run against the wrong
+# repo.
+HOOK_CWD="$(echo "$INPUT" | { command -v jq >/dev/null 2>&1 && jq -r '.cwd // empty' || python3 -c '
+import json, sys
+try:
+    print(json.load(sys.stdin).get("cwd", ""))
+except Exception:
+    print("")
+' 2>/dev/null; })"
+if [ -n "$HOOK_CWD" ] && [ -d "$HOOK_CWD" ]; then
+  cd "$HOOK_CWD" || exit 0
+fi
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   exit 0
 fi
 
-get_default_branch() {
-  local ref
-  ref="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
-  if [ -n "$ref" ]; then
-    echo "$ref"
-    return
-  fi
-  for candidate in main master; do
-    if git show-ref --verify --quiet "refs/heads/$candidate"; then
-      echo "$candidate"
-      return
-    fi
-  done
-  echo "main"
-}
-
-CURRENT_BRANCH="$(git branch --show-current)"
-DEFAULT_BRANCH="$(get_default_branch)"
-
-if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
-  echo "BLOCKED: commit refused on protected branch '$DEFAULT_BRANCH'. Create a feature/* branch first (see git-workflow skill, Phase 1)." >&2
-  exit 2
-fi
-
-# --- test / lint gate, via the single shared detector ---
-
-eval "$("$PLUGIN_ROOT/scripts/detect-project.sh" "$(git rev-parse --show-toplevel)")"
-
-if [ "${PROJECT_TYPE:-unknown}" = "unknown" ] || [ -z "${TEST_CMD:-}" ]; then
-  echo "WARNING: could not auto-detect a test command for this project — skipping automated test gate. Verify tests manually before this commit." >&2
-else
-  if ! (cd "$(git rev-parse --show-toplevel)" && eval "$TEST_CMD"); then
-    echo "BLOCKED: tests failed ('$TEST_CMD'). Fix failing tests before committing (Phase 4, testing-strategy skill)." >&2
-    exit 2
-  fi
-fi
-
-if [ -n "${LINT_CMD:-}" ]; then
-  if ! (cd "$(git rev-parse --show-toplevel)" && eval "$LINT_CMD"); then
-    echo "BLOCKED: lint failed ('$LINT_CMD'). Fix lint errors before committing." >&2
-    exit 2
-  fi
-fi
-
-# --- secret scan on the staged diff ---
-
-STAGED_DIFF="$(git diff --cached -- . ':(exclude)*.lock' ':(exclude)package-lock.json' 2>/dev/null)"
-
-if echo "$STAGED_DIFF" | grep -qE 'AKIA[0-9A-Z]{16}'; then
-  echo "BLOCKED: possible AWS access key found in staged changes." >&2
-  exit 2
-fi
-
-if echo "$STAGED_DIFF" | grep -qE -- '-----BEGIN (RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----'; then
-  echo "BLOCKED: possible private key found in staged changes." >&2
-  exit 2
-fi
-
-if echo "$STAGED_DIFF" | grep -qiE '(api|secret|access)[_-]?(key|token)\s*[:=]\s*["'"'"'][A-Za-z0-9/+=_-]{20,}["'"'"']'; then
-  echo "BLOCKED: possible hardcoded secret found in staged changes. If this is a false positive, review the diff and adjust or remove the flagged string." >&2
+# Branch protection, secret scan, and test/lint gate are shared with the
+# native git pre-commit hook (hooks/git-pre-commit-hook.sh) via this one
+# script, so the two enforcement paths can't drift apart.
+if ! "$PLUGIN_ROOT/scripts/commit-gate.sh" "$PLUGIN_ROOT" "$(git rev-parse --show-toplevel)"; then
   exit 2
 fi
 
