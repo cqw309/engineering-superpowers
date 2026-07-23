@@ -30,11 +30,25 @@ get_default_branch() {
   echo "main"
 }
 
+# Run project detection once, up front — it's also where an optional
+# `protectedBranches` list lives (.claude/project-commands.json), for teams
+# whose protected branch isn't just the git-detected default (e.g. a
+# "develop" integration branch alongside "main").
+eval "$("$PLUGIN_ROOT/scripts/detect-project.sh" "$REPO_ROOT")"
+
 CURRENT_BRANCH="$(git branch --show-current)"
 DEFAULT_BRANCH="$(get_default_branch)"
 
-if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ]; then
-  echo "BLOCKED: commit refused on protected branch '$DEFAULT_BRANCH'. Create a feature/* branch first (see git-workflow skill, Phase 1)." >&2
+is_extra_protected_branch() {
+  local branch="$1" extra
+  for extra in ${PROTECTED_BRANCHES:-}; do
+    [ "$branch" = "$extra" ] && return 0
+  done
+  return 1
+}
+
+if [ "$CURRENT_BRANCH" = "$DEFAULT_BRANCH" ] || is_extra_protected_branch "$CURRENT_BRANCH"; then
+  echo "BLOCKED: commit refused on protected branch '$CURRENT_BRANCH'. Create a feature/* branch first (see git-workflow skill, Phase 1)." >&2
   exit 1
 fi
 
@@ -89,9 +103,7 @@ if [ -n "$JWT_CANDIDATES" ]; then
   done <<< "$JWT_CANDIDATES"
 fi
 
-# --- test / lint gate, via the single shared detector ---
-
-eval "$("$PLUGIN_ROOT/scripts/detect-project.sh" "$REPO_ROOT")"
+# --- test / lint gate, using the detection already run above ---
 
 if [ "${PROJECT_TYPE:-unknown}" = "unknown" ] || [ -z "${TEST_CMD:-}" ]; then
   echo "WARNING: could not auto-detect a test command for this project — skipping automated test gate. Verify tests manually before this commit." >&2
