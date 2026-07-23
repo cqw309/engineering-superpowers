@@ -56,6 +56,17 @@ if [ "$PROJECT_TYPE" = "unknown" ] || [ "$PROJECT_TYPE" = "makefile" ]; then
     [ -z "$BUILD_CMD" ] && node_has_script build && BUILD_CMD="$PM run build"
     [ -z "$LINT_CMD" ] && node_has_script lint && LINT_CMD="$PM run lint"
     PROJECT_TYPE="node"
+
+    # TypeScript: same package.json/PM detection above already covers it (a TS project
+    # is still a Node project as far as npm/pnpm/yarn scripts go). The one TS-specific
+    # gap is type errors — "npm test" passing says nothing about `tsc` being clean, and
+    # most projects don't wire that into "lint" explicitly. Only default to `tsc --noEmit`
+    # when the project hasn't already declared its own lint script, so an existing
+    # convention (e.g. a lint script that already runs tsc) is never overridden.
+    if [ -f "tsconfig.json" ]; then
+      PROJECT_TYPE="typescript"
+      [ -z "$LINT_CMD" ] && LINT_CMD="npx tsc --noEmit"
+    fi
   elif [ -f "pyproject.toml" ] || [ -f "requirements.txt" ]; then
     [ -z "$TEST_CMD" ] && TEST_CMD="pytest"
     [ -z "$LINT_CMD" ] && command -v ruff >/dev/null 2>&1 && LINT_CMD="ruff check ."

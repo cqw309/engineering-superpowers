@@ -4,7 +4,7 @@
 
 A Claude Code plugin that turns coding requests into a real engineering process —
 requirement analysis, design, implementation, testing, review, commit, PR, merge —
-instead of jumping straight to code. Works across Node.js, Python, Go, Java, Rust, and
+instead of jumping straight to code. Works across JavaScript/TypeScript, Python, Go, Java, Rust, and
 degrades gracefully on stacks it doesn't recognize.
 
 This is not a code-generation prompt. It's a workflow engine: a set of skills that shape
@@ -99,8 +99,10 @@ same `code-review` skill checklist.
    ```json
    { "test": "make ci-test", "build": "make ci-build", "lint": "make ci-lint" }
    ```
-3. Language markers: `package.json` (npm/pnpm/yarn), `pyproject.toml`/`requirements.txt`
-   (pytest), `go.mod`, `pom.xml`/`build.gradle`, `Cargo.toml`
+3. Language markers: `package.json` (npm/pnpm/yarn; also detects `tsconfig.json` for
+   TypeScript and defaults its lint check to `tsc --noEmit` if the project hasn't
+   declared its own lint script), `pyproject.toml`/`requirements.txt` (pytest), `go.mod`,
+   `pom.xml`/`build.gradle`, `Cargo.toml`
 4. If none of the above match: the workflow doesn't block you — it warns that it
    couldn't detect a test command and asks you to verify manually, rather than making the
    plugin unusable on a project it doesn't recognize.

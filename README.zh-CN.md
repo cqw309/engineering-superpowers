@@ -3,8 +3,8 @@
 [English](README.md) | **简体中文**
 
 一个 Claude Code 插件，把"写代码的请求"变成真正的工程流程——需求分析、设计、实现、
-测试、审查、提交、PR、合并——而不是直接开始写代码。适用于 Node.js、Python、Go、
-Java、Rust，遇到识别不了的技术栈也会优雅降级，不会罢工。
+测试、审查、提交、PR、合并——而不是直接开始写代码。适用于 JavaScript/TypeScript、
+Python、Go、Java、Rust，遇到识别不了的技术栈也会优雅降级，不会罢工。
 
 这不是一个"代码生成 Prompt"。它是一个工作流引擎：一组 skill 塑造 Claude 处理任务的
 方式，slash command 负责编排各阶段顺序，还有一个 git hook 在 commit 时真正把关那些
@@ -90,8 +90,10 @@ diff 和设计文档，而且在工具权限层面就不允许它编辑文件(`W
    ```json
    { "test": "make ci-test", "build": "make ci-build", "lint": "make ci-lint" }
    ```
-3. 语言标志文件：`package.json`（npm/pnpm/yarn）、`pyproject.toml`/`requirements.txt`
-   （pytest）、`go.mod`、`pom.xml`/`build.gradle`、`Cargo.toml`
+3. 语言标志文件：`package.json`（npm/pnpm/yarn；同时会检测 `tsconfig.json` 识别
+   TypeScript，如果项目自己没声明 lint script，默认用 `tsc --noEmit` 做类型检查）、
+   `pyproject.toml`/`requirements.txt`（pytest）、`go.mod`、`pom.xml`/`build.gradle`、
+   `Cargo.toml`
 4. 以上都没命中：不会卡住你——只是提示探测不到测试命令，请手动确认，而不是让插件在
    它不认识的项目上直接罢工。
 
